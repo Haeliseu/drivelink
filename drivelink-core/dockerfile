@@ -1,0 +1,28 @@
+# Étape de construction avec Maven
+FROM maven:3.8.3-openjdk-17-slim AS build
+
+# Définir le répertoire de travail
+WORKDIR /app
+
+# Copier d'abord le fichier pom.xml pour optimiser la mise en cache des dépendances
+COPY pom.xml ./core/
+RUN mvn -f core/pom.xml dependency:go-offline
+
+# Copier le reste des sources et construire l'application
+COPY src ./core/src
+RUN mvn -f core/pom.xml clean package -DskipTests
+
+# Étape d'exécution avec OpenJDK
+FROM openjdk:17-jdk-slim 
+
+# Définir le répertoire de travail
+WORKDIR /app
+
+# Copier le fichier JAR de l'étape de construction précédente
+COPY --from=build /app/core/target/*.jar ./core.jar
+
+# Exposer le port sur lequel l'application écoute
+EXPOSE 8080
+
+# Commande pour exécuter l'application lors du démarrage du conteneur
+CMD ["java", "-jar", "core.jar"]

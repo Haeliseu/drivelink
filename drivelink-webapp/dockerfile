@@ -1,0 +1,30 @@
+# Utilise une image Node.js comme base
+FROM node:20-alpine as build
+
+# Définit le répertoire de travail dans le conteneur
+WORKDIR /app
+
+# Copie les fichiers package.json et package-lock.json pour installer les dépendances
+COPY package*.json ./
+
+# Installe les dépendances
+RUN npm install
+
+# Copie les fichiers du projet dans le conteneur
+COPY . .
+
+# Compile le code React pour la production
+RUN npm run build
+
+# Utilise une image légère Nginx pour servir l'application
+FROM nginx:alpine
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copie les fichiers de construction de la webapp dans le répertoire de travail de Nginx
+COPY --from=build /app/build /usr/share/nginx/html
+
+# Expose le port 80 pour que l'application puisse être accessible
+EXPOSE 80
+
+# Commande pour démarrer Nginx lors du lancement du conteneur
+CMD ["nginx", "-g", "daemon off;"]
